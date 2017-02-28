@@ -60,6 +60,10 @@ import 'zone.js/dist/zone';  // Included with Angular CLI.
 /***************************************************************************************************
  * APPLICATION IMPORTS
  */
+import 'rxjs/add/operator/toPromise';
+import 'rxjs/add/operator/share';
+import 'rxjs/add/operator/mergeMap';
+import 'rxjs/add/observable/of';
 
 /**
  * Date, currency, decimal and percent pipes.

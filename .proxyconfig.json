@@ -1,0 +1,7 @@
+{
+  "/oauth2": {
+    "target": "https://qa-backstage.forgerock.com",
+    "changeOrigin": true,
+    "secure": true
+  }
+}

@@ -1,0 +1,45 @@
+<ngb-alert type="danger" dismissible="true" (close)="error = null" *ngIf="error">
+  {{error}}
+</ngb-alert>
+
+<p class="lead">
+  <span *ngIf="userInfo">Hi, <strong>{{userInfo.name}}</strong>!</span> Welcome to our fantastic app!
+</p>
+<div *ngIf="userInfo">
+  <div class="card">
+    <h3 class="card-header">Profile</h3>
+    <div class="card-block">
+      <div class="form-group row">
+        <label class="col-sm-2 col-form-label">Name</label>
+        <div class="col-sm-10">
+          <p class="form-control-static">{{userInfo.name}}</p>
+        </div>
+      </div>
+      <div class="form-group row">
+        <label class="col-sm-2 col-form-label">Email</label>
+        <div class="col-sm-10">
+          <p class="form-control-static">{{userInfo.email}}</p>
+        </div>
+      </div>
+      <div class="form-group row">
+        <label class="col-sm-2 col-form-label">Address</label>
+        <div class="col-sm-10">
+          <p class="form-control-static">{{userInfo.address.formatted}}</p>
+        </div>
+      </div>
+      <div class="form-group row mb-0">
+        <label class="col-sm-2 col-form-label">Phone</label>
+        <div class="col-sm-10">
+          <p class="form-control-static mb-0">{{userInfo.phone_number}}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!--<pre>{{userInfo | json}}</pre>-->
+  <p class="mt-3">
+    <button type="button" class="btn btn-outline-primary btn-lg" (click)="logout()">Log out</button>
+  </p>
+</div>
+<p *ngIf="!userInfo">
+  <button type="button" class="btn btn-outline-primary btn-lg" (click)="login()">Log in</button>
+</p>
