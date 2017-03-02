@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { Http, Headers } from '@angular/http';
+import { Router } from '@angular/router';
 import { AuthResponse } from './oauth2/auth-response';
 import { Observable } from 'rxjs/Observable';
 import { UserInfo } from './oauth2/user-info';
@@ -7,6 +8,7 @@ import { OpenIDConfiguration } from './oauth2/openid-configuration';
 
 const STATE_STORAGE_KEY = 'oauth2state';
 const SESSION_STORAGE_KEY = 'oauth2session';
+const ROUTE_STORAGE_KEY = 'oauth2path';
 
 @Injectable()
 export class LoginService {
@@ -17,7 +19,7 @@ export class LoginService {
   baseUrl = 'http://openam.example.com/openam';
   clientId = 'demoapp';
 
-  constructor(private http: Http) {
+  constructor(private http: Http, private router: Router) {
     const session = this.storage.getItem(SESSION_STORAGE_KEY);
 
     this.openIDConfiguration = this.getOpenIDConfiguration();
@@ -62,7 +64,21 @@ export class LoginService {
    */
   private getOpenIDConfiguration(): Observable<OpenIDConfiguration> {
     return this.http.get(`${this.baseUrl}/oauth2/.well-known/openid-configuration`)
-      .mergeMap(res => Observable.of(res.json()));
+      .map(res => res.json())
+      .publishLast().refCount();
+  }
+
+  /**
+   * Gets the OpenID user info
+   * @return {Observable<R>}
+   */
+  private getUserInfo(): Observable<UserInfo> {
+    const headers = new Headers();
+    headers.append('Authorization', `Bearer ${this.session.access_token}`);
+    return this.openIDConfiguration
+      .mergeMap(config => this.http.get(config.userinfo_endpoint, { headers: headers }))
+      .map(res => res.json())
+      .publishLast().refCount();
   }
 
   /**
@@ -71,13 +87,13 @@ export class LoginService {
    * @return {string}
    */
   private getAuthorizationRequestUrl(state: string): Observable<string> {
-    return this.openIDConfiguration.mergeMap(config => Observable.of(config.authorization_endpoint +
-      '?response_type=' + encodeURI('id_token token') +
-      '&client_id=' + this.clientId +
-      '&scope=' + encodeURI('openid profile email address phone') +
-      '&redirect_uri=' + window.location.origin +
-      '&state=' + state +
-      '&nonce=' + this.generateNonce()));
+    return this.openIDConfiguration.map(config => config.authorization_endpoint +
+    '?response_type=' + encodeURI('id_token token') +
+    '&client_id=' + this.clientId +
+    '&scope=' + encodeURI('openid profile email address phone') +
+    '&redirect_uri=' + window.location.origin +
+    '&state=' + state +
+    '&nonce=' + this.generateNonce());
   }
 
   /**
@@ -89,20 +105,34 @@ export class LoginService {
   }
 
   /**
+   * Returns the current timestamp as an integer of seconds since Epoch
+   * @return {number}
+   */
+  private getDate(): number {
+    return Math.floor(Date.now() / 1000);
+  }
+
+  /**
    * Removes the session from memory & session storage
    */
   private destroySession() {
     this.storage.removeItem(SESSION_STORAGE_KEY);
     this.storage.removeItem(STATE_STORAGE_KEY);
+    this.storage.removeItem(ROUTE_STORAGE_KEY);
     this.session = null;
   }
 
   /**
    * Stores the state and redirects to authorize
    */
-  authorize() {
+  authorize(route?: string[]) {
     const state = this.generateNonce();
     this.storage.setItem(STATE_STORAGE_KEY, state);
+
+    if (route) {
+      this.storage.setItem(ROUTE_STORAGE_KEY, JSON.stringify(route));
+    }
+
     this.getAuthorizationRequestUrl(state).subscribe(url => this.redirect(url));
   }
 
@@ -127,22 +157,18 @@ export class LoginService {
       throw new Error('Invalid state: ' + parsedResponse.state);
     }
 
+    // set date
+    parsedResponse.issued_at = this.getDate();
+
     this.session = parsedResponse;
     this.userInfo = this.getUserInfo();
 
     this.storage.setItem(SESSION_STORAGE_KEY, JSON.stringify(parsedResponse));
-  }
 
-  /**
-   * Gets the OpenID user info
-   * @return {Observable<R>}
-   */
-  getUserInfo(): Observable<UserInfo> {
-    const headers = new Headers();
-    headers.append('Authorization', `Bearer ${this.session.access_token}`);
-    return this.openIDConfiguration
-      .mergeMap(config => this.http.get(config.userinfo_endpoint, { headers: headers }))
-      .mergeMap(res => Observable.of(res.json()));
+    const route = this.storage.getItem(ROUTE_STORAGE_KEY);
+    if (route) {
+      this.router.navigate(JSON.parse(route));
+    }
   }
 
   /**
@@ -158,6 +184,14 @@ export class LoginService {
         '&id_token_hint=' + id_token
       );
     });
+  }
+
+  /**
+   * Checks the expiration date of the token
+   */
+  isTokenValid(): boolean {
+    return this.session &&
+      (parseInt(this.session.expires_in, 10) + this.session.issued_at > this.getDate());
   }
 
 }

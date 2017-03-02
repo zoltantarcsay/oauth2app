@@ -5,6 +5,7 @@ export interface AuthResponse {
   state: string;
   token_type: string;
   expires_in: string;
+  issued_at: number;
   error_description: string;
   error: string;
 }

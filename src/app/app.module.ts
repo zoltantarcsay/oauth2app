@@ -8,11 +8,14 @@ import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
 import { AppComponent } from './app.component';
 import { HomeComponent } from './home/home.component';
 import { LoginService } from './login.service';
+import { ProfileComponent } from './profile/profile.component';
+import { AuthGuardService } from './auth-guard.service';
 
 @NgModule({
   declarations: [
     AppComponent,
-    HomeComponent
+    HomeComponent,
+    ProfileComponent
   ],
   imports: [
     BrowserModule,
@@ -22,7 +25,8 @@ import { LoginService } from './login.service';
     NgbModule.forRoot()
   ],
   providers: [
-    LoginService
+    LoginService,
+    AuthGuardService
   ],
   bootstrap: [AppComponent]
 })
